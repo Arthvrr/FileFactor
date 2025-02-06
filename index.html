@@ -78,7 +78,7 @@
     }
 
     #file-input {
-      display: none; /* Masquer l'input par défaut */
+      display: none;
     }
   </style>
 </head>
@@ -121,7 +121,7 @@
 
     // Gérer le clic sur la zone
     dropZone.addEventListener('click', () => {
-      fileInput.click(); // Simuler un clic sur l'input file
+      fileInput.click();
     });
 
     // Gérer la sélection d'un fichier via l'input
@@ -135,8 +135,11 @@
     // Fonction pour gérer le fichier
     async function handleFile(file) {
       // Simuler la génération d'une URL unique
-      const uniqueId = Math.random().toString(36).substring(2, 15); // Génère un identifiant aléatoire
-      const privateUrl = `https://filefactor.com/files/${uniqueId}`; // Exemple d'URL privée
+      const uniqueId = Math.random().toString(36).substring(2, 15);
+      const privateUrl = `https://filefactor.com/files/${uniqueId}`;
+
+      // Crée une URL de téléchargement locale
+      const fileUrl = URL.createObjectURL(file);
 
       // Affiche le fichier dans la liste avec son URL
       const fileItem = document.createElement('div');
@@ -145,6 +148,9 @@
         <span>${file.name}</span><br>
         <a href="${privateUrl}" target="_blank" style="color: #6a11cb; text-decoration: underline;">
           ${privateUrl}
+        </a><br>
+        <a href="${fileUrl}" download="${file.name}" style="color: #fff; text-decoration: underline;">
+          Download File
         </a>
       `;
 
