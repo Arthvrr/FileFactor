@@ -158,6 +158,38 @@ h1 {
     bottom: 50px; /* Petit effet de remontée */
 }
 
+
+
+/* AJOUT POUR LE MOT DE PASSE */
+.password-container {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#password-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+#password-input:focus {
+    border-color: #fff;
+    background: rgba(255,255,255,0.2);
+    box-shadow: 0 0 15px rgba(255,255,255,0.1);
+}
+
+#password-input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 

@@ -6,14 +6,22 @@
   <title>FileFactor - Transfert</title>
   <link rel="icon" href="logo.ico" type="image/x-icon">
   <link rel="stylesheet" href="style.css">
+  
+  <script src="https://unpkg.com/fflate@0.8.0/umd/index.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>FileFactor</h1>
-    <div id="drop-zone">Glisse un fichier ici (Max 100MB)</div>
+    
+    <div id="drop-zone">
+      <span style="font-size: 2em; margin-bottom: 10px;">📂</span>
+      <span>Glisse un fichier ici<br><small>(Max 100MB)</small></span>
+    </div>
     <input type="file" id="file-input">
+    
     <div id="file-list"></div>
   </div>
+
   <div id="toast">Lien copié ! 📋</div>
   <script src="app.js"></script>
 </body>
