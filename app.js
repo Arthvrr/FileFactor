@@ -67,7 +67,7 @@ function uploadFile(file) {
                 <div class="url-box">${longUrl}</div>
 
                 <div style="text-align:center; margin-top:10px;">
-                    <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}')">Copier le lien</button>
+                    <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}'); showToast();">Copier le lien</button>
                     <a href="${longUrl}" target="_blank" class="action-btn">Ouvrir</a>
                 </div>
 
@@ -82,4 +82,10 @@ function uploadFile(file) {
         console.error(err);
         item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur: ${err.message}</span>`;
     });
+}
+
+function showToast() {
+    const toast = document.getElementById("toast");
+    toast.className = "show";
+    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
 }
