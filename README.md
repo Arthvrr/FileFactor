@@ -8,6 +8,7 @@ FileFactor est une application web qui permet de télécharger facilement des fi
 - Génération automatique d'URLs privées pour chaque fichier.
 - Accès facile aux fichiers via des liens personnalisés.
 - Interface moderne et responsive.
+- Génération automatique d'un QR Code pour faciliter l'ouverture sur Smartphone
 
 ---
 
@@ -17,5 +18,3 @@ FileFactor est une application web qui permet de télécharger facilement des fi
 - **HTML5**
 - **CSS3**
 - **JavaScript (Vanilla)**
-
-### **Backend (à venir) :**

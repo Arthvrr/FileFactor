@@ -1,0 +1,144 @@
+/* RESET & BASE */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Police plus moderne */
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Permet le scroll si nécessaire */
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: #fff;
+    padding: 20px; /* Marge de sécurité sur mobile */
+}
+
+/* CONTENEUR PRINCIPAL */
+.container {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.15); /* Un peu plus visible */
+    backdrop-filter: blur(10px); /* Effet verre flouté (très moderne) */
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0px 8px 32px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    width: 90%; 
+    max-width: 500px; 
+}
+
+h1 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* ZONE DE DRAG & DROP */
+#drop-zone {
+    width: 100%;
+    height: 150px;
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(0,0,0,0.05);
+}
+
+#drop-zone:hover, #drop-zone.dragover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.02);
+    border-color: #fff;
+}
+
+/* LISTE DES FICHIERS */
+#file-list {
+    margin-top: 25px;
+    text-align: left;
+    width: 100%;
+}
+
+.file-item {
+    margin: 15px 0;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 15px;
+    border-radius: 10px;
+    word-break: break-all; /* INDISPENSABLE : Coupe l'URL si elle est trop longue */
+    animation: fadeIn 0.5s ease;
+}
+
+/* Styles des liens et boutons */
+.url-box {
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-family: monospace;
+    font-size: 0.9rem;
+    border: 2px solid #6a11cb;
+    user-select: all; /* Sélectionne tout le texte au clic */
+}
+
+.action-btn {
+    background: #fff;
+    color: #6a11cb;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    display: inline-block;
+    transition: transform 0.2s;
+    margin-top: 5px;
+}
+
+.action-btn:active {
+    transform: scale(0.95);
+}
+
+.qr-code {
+    margin-top: 15px;
+    border-radius: 10px;
+    border: 4px solid #fff;
+    max-width: 100%;
+    height: auto;
+    
+    /* C'EST ICI QUE LA MAGIE OPÈRE POUR LE CENTRAGE : */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* LOADER */
+.loader {
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top: 3px solid #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* AJUSTEMENTS MOBILES SPÉCIFIQUES */
+@media (max-width: 480px) {
+    h1 { font-size: 1.5rem; }
+    .container { padding: 20px; }
+    #drop-zone { height: 120px; }
+}
