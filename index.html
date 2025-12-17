@@ -1,92 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FileFactor - Upload and Download Files</title>
+  <title>FileFactor - Transfert Rapide</title>
   <link rel="icon" href="logo.ico" type="image/x-icon">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: linear-gradient(135deg, #6a11cb, #2575fc);
-      color: #fff;
-    }
-
-    .container {
-      text-align: center;
-      background-color: #ffffff11;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-      width: 400px;
-    }
-
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 20px;
-      color: #fff;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    }
-
-    #drop-zone {
-      width: 100%;
-      height: 150px;
-      border: 2px dashed #ffffffaa;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      cursor: pointer;
-      transition: background-color 0.3s, transform 0.2s;
-    }
-
-    #drop-zone:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      transform: scale(1.05);
-    }
-
-    #file-list {
-      margin-top: 20px;
-    }
-
-    .file-item {
-      margin: 10px 0;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-    }
-
-    .file-item a {
-      color: #6a11cb;
-      font-weight: bold;
-      text-decoration: none;
-    }
-
-    .file-item a:hover {
-      text-decoration: underline;
-    }
-
-    #file-input {
-      display: none;
-    }
+    /* TON DESIGN ORIGINAL (Conservé) */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff; }
+    .container { text-align: center; background-color: rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 15px; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2); width: 400px; }
+    h1 { font-size: 2rem; margin-bottom: 20px; color: #fff; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); }
+    #drop-zone { width: 100%; height: 150px; border: 2px dashed rgba(255, 255, 255, 0.7); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
+    #drop-zone:hover { background-color: rgba(255, 255, 255, 0.1); transform: scale(1.05); }
+    #file-list { margin-top: 20px; text-align: left; }
+    .file-item { margin: 10px 0; background: rgba(0, 0, 0, 0.2); padding: 10px; border-radius: 5px; word-break: break-all; }
+    .file-item a { color: #89fffd; font-weight: bold; text-decoration: none; }
+    .file-item a:hover { text-decoration: underline; }
+    #file-input { display: none; }
+    .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6a11cb; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>FileFactor</h1>
-    <div id="drop-zone">Drag & Drop your files here or click to upload</div>
+    <div id="drop-zone">Glisse un fichier ici (Max 100MB)</div>
     <input type="file" id="file-input">
     <div id="file-list"></div>
   </div>
@@ -96,66 +35,71 @@
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
 
-    // Gérer le survol lors du drag
-    dropZone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-    });
-
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.style.backgroundColor = 'transparent';
-    });
-
-    // Gérer le drop
-    dropZone.addEventListener('drop', async (e) => {
+    // --- Gestion du Drag & Drop ---
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; });
+    dropZone.addEventListener('dragleave', () => { dropZone.style.backgroundColor = 'transparent'; });
+    dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.style.backgroundColor = 'transparent';
-
-      const file = e.dataTransfer.files[0];
-      if (!file) {
-        alert('No file detected. Please try again.');
-        return;
-      }
-
-      await handleFile(file);
+      if(e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    });
+    
+    // --- Gestion du Clic ---
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      if(fileInput.files.length) uploadFile(fileInput.files[0]);
     });
 
-    // Gérer le clic sur la zone
-    dropZone.addEventListener('click', () => {
-      fileInput.click();
-    });
+    // --- Fonction d'envoi vers TmpFiles ---
+    function uploadFile(file) {
+      const item = document.createElement('div');
+      item.classList.add('file-item');
+      item.innerHTML = `<span>Envoi de ${file.name}... </span><div class="loader"></div>`;
+      fileList.appendChild(item);
 
-    // Gérer la sélection d'un fichier via l'input
-    fileInput.addEventListener('change', async () => {
-      const file = fileInput.files[0];
-      if (!file) return;
+      const formData = new FormData();
+      formData.append('file', file);
 
-      await handleFile(file);
-    });
+      // Utilisation du proxy pour éviter les erreurs CORS
+      const proxyUrl = 'https://corsproxy.io/?';
+      const targetUrl = 'https://tmpfiles.org/api/v1/upload';
 
-    // Fonction pour gérer le fichier
-    async function handleFile(file) {
-      // Simuler la génération d'une URL unique
-      const uniqueId = Math.random().toString(36).substring(2, 15);
-      const privateUrl = `https://filefactor.com/files/${uniqueId}`;
+      fetch(proxyUrl + encodeURIComponent(targetUrl), {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Erreur HTTP: " + response.status);
+        return response.json();
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          let originalUrl = data.data.url;
+          // LA CORRECTION EST ICI : On force l'ajout de "/dl/" dans l'URL
+          let directDownloadUrl = originalUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
 
-      // Crée une URL de téléchargement locale
-      const fileUrl = URL.createObjectURL(file);
-
-      // Affiche le fichier dans la liste avec son URL
-      const fileItem = document.createElement('div');
-      fileItem.classList.add('file-item');
-      fileItem.innerHTML = `
-        <span>${file.name}</span><br>
-        <a href="${privateUrl}" target="_blank" style="color: #6a11cb; text-decoration: underline;">
-          ${privateUrl}
-        </a><br>
-        <a href="${fileUrl}" download="${file.name}" style="color: #fff; text-decoration: underline;">
-          Download File
-        </a>
-      `;
-
-      fileList.appendChild(fileItem);
+          item.innerHTML = `
+            <strong>${file.name}</strong> envoyé !<br>
+            <span style="font-size:0.9em; opacity:0.8;">Lien direct (sans pubs) :</span><br>
+            
+            <div style="margin-top:5px; display:flex; gap:10px; align-items:center;">
+                <input type="text" value="${directDownloadUrl}" style="width:100%; padding:5px; border-radius:4px; border:none; color:#333;">
+                <button onclick="navigator.clipboard.writeText('${directDownloadUrl}')" style="cursor:pointer; padding:5px 10px; border:none; border-radius:4px; background:#fff; color:#6a11cb; font-weight:bold;">Copier</button>
+            </div>
+            
+            <br>
+            <a href="${directDownloadUrl}" target="_blank" style="background-color:#fff; color:#6a11cb; padding:8px 15px; border-radius:20px; text-decoration:none; font-weight:bold; display:inline-block;">
+              Télécharger maintenant ⬇️
+            </a>
+          `;
+        } else {
+          throw new Error("L'API a refusé le fichier.");
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        item.innerHTML = `<span style="color: #ff6b6b;">Erreur: ${err.message}</span>`;
+      });
     }
   </script>
 </body>

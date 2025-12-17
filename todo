@@ -1,0 +1,3 @@
+- créer nouvelle url avec id random généré
+- stocker fichier dans cette nouvelle url
+- laisser un délai d'1 semaine avant expiration
