@@ -1,95 +1,179 @@
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
+const folderInput = document.getElementById('folder-input'); // NOUVEAU
 const fileList = document.getElementById('file-list');
 
 // --- Events ---
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; });
 dropZone.addEventListener('dragleave', () => { dropZone.style.backgroundColor = 'transparent'; });
-dropZone.addEventListener('drop', (e) => {
+
+dropZone.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropZone.style.backgroundColor = 'transparent';
-    if(e.dataTransfer.files.length) prepareAndUpload(e.dataTransfer.files[0]);
+    const items = e.dataTransfer.items;
+    if (items && items.length > 0) {
+        handleDroppedItems(items);
+    } else if (e.dataTransfer.files.length > 0) {
+        processFiles(Array.from(e.dataTransfer.files));
+    }
 });
-dropZone.addEventListener('click', () => fileInput.click());
+
+// Le clic sur la zone globale ne déclenche plus rien (car on a mis des boutons)
+// dropZone.addEventListener('click', ...) -> SUPPRIMÉ
+
+// Écouteur pour les FICHIERS
 fileInput.addEventListener('change', () => {
-    if(fileInput.files.length) prepareAndUpload(fileInput.files[0]);
+    if(fileInput.files.length) processFiles(Array.from(fileInput.files));
 });
 
-// --- Logic ---
+// Écouteur pour les DOSSIERS
+folderInput.addEventListener('change', () => {
+    if(folderInput.files.length) processFiles(Array.from(folderInput.files));
+});
 
-function prepareAndUpload(file) {
-    // 1. Vérif Taille (100 Mo)
+
+// --- SCANNER DRAG & DROP (Inchangé) ---
+async function handleDroppedItems(items) {
+    const files = [];
+    const entries = Array.from(items).map(item => item.webkitGetAsEntry ? item.webkitGetAsEntry() : null).filter(e => e);
+
+    async function traverseFileTree(entry, path = "") {
+        if (entry.isFile) {
+            const file = await new Promise(resolve => entry.file(resolve));
+            file.fullPath = path + file.name; // Chemin reconstruit manuellement pour le drag&drop
+            files.push(file);
+        } else if (entry.isDirectory) {
+            const dirReader = entry.createReader();
+            const entries = await new Promise(resolve => dirReader.readEntries(resolve));
+            for (const child of entries) {
+                await traverseFileTree(child, path + entry.name + "/");
+            }
+        }
+    }
+
+    const scanItem = document.createElement('div');
+    scanItem.classList.add('file-item');
+    scanItem.innerHTML = `<span>🔎 Analyse...</span><div class="loader"></div>`;
+    fileList.prepend(scanItem);
+
+    await Promise.all(entries.map(entry => traverseFileTree(entry)));
+    
+    scanItem.remove();
+    processFiles(files);
+}
+
+// --- LOGIQUE DE DÉCISION ---
+function processFiles(files) {
+    if (files.length === 0) return;
+
+    if (files.length > 1) {
+        createMultiZipAndUpload(files);
+        return;
+    }
+
+    const file = files[0];
     if (file.size > 100 * 1024 * 1024) {
         alert("⚠️ Fichier trop volumineux (Max 100 Mo)");
         return;
     }
 
-    // 2. Détection fichiers sensibles (Code ou sans extension)
-    // Ce sont eux qui provoquent l'erreur 502 s'ils ne sont pas zippés
     const hasNoExtension = !file.name.includes('.');
-    const riskyExtensions = ['.py', '.md', '.js', '.html', '.php', '.sh', '.bat', '.css', '.json', '.xml', '.ts', '.c', '.cpp', '.java', '.rb', '.go', '.pl', '.sql'];
+    const riskyExtensions = ['.py', '.md', '.js', '.html', '.php', '.sh', '.bat', '.css', '.json', '.ts'];
+    let fileExt = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')).toLowerCase() : "";
     
-    let fileExt = "";
-    if (!hasNoExtension) {
-        fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    }
-    
-    const needsZip = hasNoExtension || riskyExtensions.includes(fileExt);
-
-    if (needsZip) {
-        createZipAndUpload(file);
+    if (hasNoExtension || riskyExtensions.includes(fileExt)) {
+        createSingleZipAndUpload(file);
     } else {
-        // Envoi direct pour les fichiers "sûrs" (images, pdf, zip, vidéos...)
         displayAndUpload(file, file.name, false);
     }
 }
 
-function createZipAndUpload(file) {
+// --- FONCTIONS ZIP & UPLOAD ---
+
+async function createMultiZipAndUpload(filesArray) {
     const item = document.createElement('div');
     item.classList.add('file-item');
-    item.innerHTML = `<span>📦 Compression (fichier sensible)... </span><div class="loader"></div>`;
+    item.innerHTML = `<span>📦 Compression de <strong>${filesArray.length} fichiers</strong>... </span><div class="loader"></div>`;
     fileList.prepend(item);
 
-    // Lecture du fichier en mémoire pour fflate
+    try {
+        const zipData = {};
+
+        const filePromises = filesArray.map(file => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // C'EST ICI QUE ÇA SE JOUE :
+                    // 1. Soit c'est du Drag&Drop -> on a créé 'file.fullPath'
+                    // 2. Soit c'est l'input Dossier -> le navigateur donne 'file.webkitRelativePath'
+                    // 3. Soit c'est l'input Fichier -> juste 'file.name'
+                    const fileName = file.fullPath || file.webkitRelativePath || file.name;
+                    resolve({ name: fileName, content: new Uint8Array(e.target.result) });
+                };
+                reader.onerror = () => reject(file.name);
+                reader.readAsArrayBuffer(file);
+            });
+        });
+
+        const results = await Promise.all(filePromises);
+
+        results.forEach(res => {
+            zipData[res.name] = res.content;
+        });
+
+        fflate.zip(zipData, { level: 1 }, (err, data) => {
+            if (err) throw err;
+
+            // Nommage intelligent de l'archive
+            let rootName = "Archive";
+            
+            // On essaie de trouver le nom du dossier racine
+            if(filesArray[0].webkitRelativePath) {
+                 rootName = filesArray[0].webkitRelativePath.split('/')[0];
+            } else if (filesArray[0].fullPath) {
+                 rootName = filesArray[0].fullPath.split('/')[0];
+            }
+            
+            const zipName = `${rootName}.zip`;
+            const zipFile = new File([data], zipName, { type: "application/zip" });
+            
+            item.remove();
+            displayAndUpload(zipFile, zipName, true);
+        });
+
+    } catch (error) {
+        console.error(error);
+        item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur lecture fichiers.</span>`;
+    }
+}
+
+function createSingleZipAndUpload(file) {
+    const item = document.createElement('div');
+    item.classList.add('file-item');
+    item.innerHTML = `<span>📦 Compression... </span><div class="loader"></div>`;
+    fileList.prepend(item);
+
     const reader = new FileReader();
-    
     reader.onload = function(e) {
         const fileContent = new Uint8Array(e.target.result);
-        
-        // Structure du ZIP
         const zipData = {};
         zipData[file.name] = fileContent;
 
-        // Création du ZIP (Niveau 1 = Rapide)
         fflate.zip(zipData, { level: 1 }, (err, data) => {
-            if (err) {
-                console.error(err);
-                item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur ZIP: ${err.message}</span>`;
-                return;
-            }
-
-            // On crée l'objet fichier ZIP
+            if (err) { item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur ZIP</span>`; return; }
             const zipName = file.name + ".zip";
             const zipFile = new File([data], zipName, { type: "application/zip" });
-            
-            item.remove(); // On enlève le message de compression
-            
-            // On lance l'envoi du ZIP, en précisant 'true' pour dire qu'on l'a zippé nous-même
+            item.remove();
             displayAndUpload(zipFile, file.name, true);
         });
     };
-
-    reader.onerror = function() {
-        item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur de lecture fichier</span>`;
-    };
-
     reader.readAsArrayBuffer(file);
 }
 
 function displayAndUpload(fileToSend, originalName, wasZippedByUs) {
     const item = document.createElement('div');
     item.classList.add('file-item');
-    item.innerHTML = `<span>🚀 Envoi de <strong>${originalName}</strong>... </span><div class="loader"></div>`;
+    item.innerHTML = `<span>🚀 Envoi de <strong>${fileToSend.name}</strong>... </span><div class="loader"></div>`;
     fileList.prepend(item);
 
     const formData = new FormData();
@@ -103,7 +187,7 @@ function displayAndUpload(fileToSend, originalName, wasZippedByUs) {
         body: formData
     })
     .then(res => {
-        if (!res.ok) throw new Error("Erreur Upload: " + res.status);
+        if (!res.ok) throw new Error("Erreur: " + res.status);
         return res.json();
     })
     .then(data => {
@@ -111,24 +195,19 @@ function displayAndUpload(fileToSend, originalName, wasZippedByUs) {
             let longUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(longUrl)}`;
 
-            // Si on a zippé le fichier nous-mêmes, on l'indique dans le nom final
-            let finalName = wasZippedByUs ? originalName + " (.zip)" : originalName;
+            let finalLabel = wasZippedByUs ? originalName + (originalName.endsWith('.zip') ? "" : " (.zip)") : originalName;
 
             item.innerHTML = `
-                <div style="margin-bottom:5px;">✅ <strong>${finalName}</strong> est prêt !</div>
-                
+                <div style="margin-bottom:5px;">✅ <strong>${finalLabel}</strong> est prêt !</div>
                 <div class="url-box">${longUrl}</div>
-
                 <div style="text-align:center; margin-top:10px;">
                     <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}'); showToast();">Copier</button>
                     <a href="${longUrl}" target="_blank" class="action-btn">Télécharger</a>
                 </div>
-
                 <div style="text-align: center; margin-top: 15px;">
                     <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" title="Scan pour mobile">
                 </div>
             `;
-            
         } else {
             throw new Error("L'API a refusé le fichier.");
         }

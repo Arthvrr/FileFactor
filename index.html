@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FileFactor - Transfert</title>
+  <title>FileFactor - Transfert Pro</title>
   <link rel="icon" href="logo.ico" type="image/x-icon">
   <link rel="stylesheet" href="style.css">
-  
   <script src="https://unpkg.com/fflate@0.8.0/umd/index.js"></script>
 </head>
 <body>
@@ -15,9 +14,17 @@
     
     <div id="drop-zone">
       <span style="font-size: 2em; margin-bottom: 10px;">📂</span>
-      <span>Glisse un fichier ici<br><small>(Max 100MB)</small></span>
+      <span style="display:block; margin-bottom:15px;">Glisse tes éléments ici<br><small>(Max 100MB)</small></span>
+      
+      <div style="display:flex; gap:10px; justify-content:center;">
+          <button onclick="document.getElementById('file-input').click()" class="upload-btn">📄 Fichiers</button>
+          <button onclick="document.getElementById('folder-input').click()" class="upload-btn">📁 Dossier</button>
+      </div>
     </div>
-    <input type="file" id="file-input">
+
+    <input type="file" id="file-input" multiple style="display:none">
+    
+    <input type="file" id="folder-input" webkitdirectory directory multiple style="display:none">
     
     <div id="file-list"></div>
   </div>
