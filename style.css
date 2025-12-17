@@ -174,10 +174,32 @@ h1 {
     background: rgba(255, 255, 255, 0.4);
 }
 
+.progress-container {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    margin: 10px 0;
+    height: 10px;
+    overflow: hidden;
+    display: none; /* Caché par défaut */
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #00ffcc; /* Vert fluo pour bien voir */
+    transition: width 0.2s;
+}
+
+.progress-text {
+    font-size: 0.8em;
+    margin-bottom: 5px;
+    display: block;
+}
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* AJUSTEMENTS MOBILES SPÉCIFIQUES */
 @media (max-width: 480px) {
     h1 { font-size: 1.5rem; }
     .container { padding: 20px; }

@@ -191,8 +191,18 @@ function createSingleZipAndUpload(file) {
 function displayAndUpload(fileToSend, originalName, wasZippedByUs) {
     const item = document.createElement('div');
     item.classList.add('file-item');
-    item.innerHTML = `<span>🚀 Envoi de <strong>${fileToSend.name}</strong>... </span><div class="loader"></div>`;
+    
+    // On prépare l'affichage avec la barre de progression
+    item.innerHTML = `
+        <span class="progress-text">🚀 Envoi de <strong>${originalName}</strong>... <span class="percent">0%</span></span>
+        <div class="progress-container" style="display: block;">
+            <div class="progress-bar"></div>
+        </div>
+    `;
     fileList.prepend(item);
+
+    const progressBar = item.querySelector('.progress-bar');
+    const percentText = item.querySelector('.percent');
 
     const formData = new FormData();
     formData.append('file', fileToSend);
@@ -200,40 +210,55 @@ function displayAndUpload(fileToSend, originalName, wasZippedByUs) {
     const proxyUrl = 'https://corsproxy.io/?';
     const uploadUrl = 'https://tmpfiles.org/api/v1/upload';
 
-    fetch(proxyUrl + encodeURIComponent(uploadUrl), {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => {
-        if (!res.ok) throw new Error("Erreur: " + res.status);
-        return res.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            let longUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(longUrl)}`;
+    // --- UTILISATION DE XMLHttpRequest POUR LA BARRE ---
+    const xhr = new XMLHttpRequest();
 
-            let finalLabel = wasZippedByUs ? originalName + (originalName.endsWith('.zip') ? "" : " (.zip)") : originalName;
-
-            item.innerHTML = `
-                <div style="margin-bottom:5px;">✅ <strong>${finalLabel}</strong> est prêt !</div>
-                <div class="url-box">${longUrl}</div>
-                <div style="text-align:center; margin-top:10px;">
-                    <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}'); showToast();">Copier</button>
-                    <a href="${longUrl}" target="_blank" class="action-btn">Télécharger</a>
-                </div>
-                <div style="text-align: center; margin-top: 15px;">
-                    <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" title="Scan pour mobile">
-                </div>
-            `;
-        } else {
-            throw new Error("L'API a refusé le fichier.");
+    // 1. Écoute de la progression
+    xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            progressBar.style.width = percentComplete + '%';
+            percentText.innerText = percentComplete + '%';
         }
-    })
-    .catch(err => {
-        console.error(err);
-        item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur: ${err.message}</span>`;
     });
+
+    // 2. Gestion de la réponse (Succès)
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            if (data.status === 'success') {
+                let longUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(longUrl)}`;
+                let finalLabel = wasZippedByUs ? originalName + (originalName.endsWith('.zip') ? "" : " (.zip)") : originalName;
+
+                // On remplace le contenu par le succès
+                item.innerHTML = `
+                    <div style="margin-bottom:5px;">✅ <strong>${finalLabel}</strong> est prêt !</div>
+                    <div class="url-box">${longUrl}</div>
+                    <div style="text-align:center; margin-top:10px;">
+                        <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}'); showToast();">Copier</button>
+                        <a href="${longUrl}" target="_blank" class="action-btn">Télécharger</a>
+                    </div>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <img src="${qrCodeUrl}" class="qr-code" alt="QR Code">
+                    </div>
+                `;
+            } else {
+                item.innerHTML = `<span style="color: #ff6b6b;">❌ Refus de l'API</span>`;
+            }
+        } else {
+            item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur serveur : ${xhr.status}</span>`;
+        }
+    };
+
+    // 3. Gestion des erreurs réseau
+    xhr.onerror = function() {
+        item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur de connexion</span>`;
+    };
+
+    // 4. Envoi de la requête
+    xhr.open('POST', proxyUrl + encodeURIComponent(uploadUrl));
+    xhr.send(formData);
 }
 
 function showToast() {
