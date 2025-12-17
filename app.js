@@ -2,47 +2,54 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const fileList = document.getElementById('file-list');
 
-// --- Events ---
-dropZone.addEventListener('dragover', (e) => { 
-    e.preventDefault(); 
-    dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; 
-});
-
-dropZone.addEventListener('dragleave', () => { 
-    dropZone.style.backgroundColor = 'transparent'; 
-});
-
+// --- Events (Inchangés) ---
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'; });
+dropZone.addEventListener('dragleave', () => { dropZone.style.backgroundColor = 'transparent'; });
 dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.style.backgroundColor = 'transparent';
-    if(e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    if(e.dataTransfer.files.length) prepareAndUpload(e.dataTransfer.files[0]);
 });
-
 dropZone.addEventListener('click', () => fileInput.click());
-
 fileInput.addEventListener('change', () => {
-    if(fileInput.files.length) uploadFile(fileInput.files[0]);
+    if(fileInput.files.length) prepareAndUpload(fileInput.files[0]);
 });
 
 // --- Logic ---
-function uploadFile(file) {
-    // Création de l'élément visuel dans la liste
+
+function prepareAndUpload(file) {
+    // Liste des extensions qui provoquent souvent des erreurs 502 (Code)
+    const riskyExtensions = ['.py', '.md', '.js', '.html', '.php', '.sh', '.bat', '.css', '.json', '.xml', '.ts', '.c', '.cpp', '.java',' '];
+    
+    // On vérifie si le fichier a une extension risquée
+    const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    let fileToSend = file;
+    let renamed = false;
+
+    if (riskyExtensions.includes(fileExt)) {
+        renamed = true;
+        // ON DÉGUISE LE FICHIER :
+        // 1. On garde le même contenu
+        // 2. On ajoute ".txt" à la fin du nom (ex: script.py.txt)
+        // 3. On force le type MIME en 'text/plain' pour calmer le Proxy
+        fileToSend = new File([file], file.name + ".txt", { type: 'text/plain' });
+    }
+
+    uploadFile(fileToSend, file.name, renamed);
+}
+
+function uploadFile(file, originalName, isRenamed) {
     const item = document.createElement('div');
     item.classList.add('file-item');
-    // On met un petit emoji fusée pour le style
-    item.innerHTML = `<span>🚀 Envoi de <strong>${file.name}</strong>... </span><div class="loader"></div>`;
-    
-    // "prepend" ajoute le fichier en haut de la liste (plus pratique que appendChild)
+    item.innerHTML = `<span>🚀 Envoi de <strong>${originalName}</strong>... </span><div class="loader"></div>`;
     fileList.prepend(item);
 
     const formData = new FormData();
     formData.append('file', file);
 
-    // On utilise le proxy pour contourner les erreurs CORS
     const proxyUrl = 'https://corsproxy.io/?';
     const uploadUrl = 'https://tmpfiles.org/api/v1/upload';
 
-    // 1. UPLOAD VERS TMPFILES
     fetch(proxyUrl + encodeURIComponent(uploadUrl), {
         method: 'POST',
         body: formData
@@ -53,27 +60,33 @@ function uploadFile(file) {
     })
     .then(data => {
         if (data.status === 'success') {
-            // 2. SUCCÈS : On récupère l'URL et on ajoute /dl/ pour le téléchargement direct
             let longUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-            
-            // Génération du QR Code basé sur l'URL longue
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(longUrl)}`;
 
-            // 3. AFFICHAGE FINAL (Sans raccourcisseur)
-            // On utilise les classes CSS responsive (url-box, action-btn)
+            // Message d'avertissement si on a renommé le fichier
+            let warningMsg = "";
+            if (isRenamed) {
+                warningMsg = `<div style="color: #ffd700; font-size: 0.9em; margin-top: 5px;">
+                    ⚠️ Fichier converti en <strong>.txt</strong> pour l'envoi.<br>
+                    Pense à retirer le ".txt" après téléchargement !
+                </div>`;
+            }
+
             item.innerHTML = `
                 <div style="margin-bottom:5px;">✅ <strong>${file.name}</strong> est prêt !</div>
+                ${warningMsg}
                 
                 <div class="url-box">${longUrl}</div>
 
                 <div style="text-align:center; margin-top:10px;">
-                    <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}'); showToast();">Copier le lien</button>
+                    <button class="action-btn" onclick="navigator.clipboard.writeText('${longUrl}')">Copier le lien</button>
                     <a href="${longUrl}" target="_blank" class="action-btn">Ouvrir</a>
                 </div>
 
-                <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" title="Scan pour mobile">
+                <div style="text-align: center; margin-top: 15px;">
+                    <img src="${qrCodeUrl}" class="qr-code" alt="QR Code" title="Scan pour mobile">
+                </div>
             `;
-
         } else {
             throw new Error("L'API a refusé le fichier.");
         }
@@ -82,10 +95,4 @@ function uploadFile(file) {
         console.error(err);
         item.innerHTML = `<span style="color: #ff6b6b;">❌ Erreur: ${err.message}</span>`;
     });
-}
-
-function showToast() {
-    const toast = document.getElementById("toast");
-    toast.className = "show";
-    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
 }
