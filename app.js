@@ -66,24 +66,42 @@ async function handleDroppedItems(items) {
 function processFiles(files) {
     if (files.length === 0) return;
 
+    // 1. CALCUL DE LA TAILLE TOTALE (NOUVEAU)
+    // On additionne la taille de chaque fichier trouvé
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo en octets
+
+    // 2. VÉRIFICATION GLOBALE
+    if (totalSize > MAX_SIZE) {
+        // On convertit en Mo pour afficher un message clair (ex: "150.50 Mo")
+        const sizeInMo = (totalSize / (1024 * 1024)).toFixed(2);
+        alert(`⚠️ Trop lourd ! Le total fait ${sizeInMo} Mo (La limite est de 100 Mo).`);
+        return; // ON ARRÊTE TOUT ICI
+    }
+
+    // --- Si la taille est OK, on continue comme avant ---
+
+    // CAS 1 : Plusieurs fichiers -> ZIP GLOBAL
     if (files.length > 1) {
         createMultiZipAndUpload(files);
         return;
     }
 
+    // CAS 2 : Un seul fichier
     const file = files[0];
-    if (file.size > 100 * 1024 * 1024) {
-        alert("⚠️ Fichier trop volumineux (Max 100 Mo)");
-        return;
-    }
+    
+    // (L'ancienne vérification de taille ici n'est plus nécessaire car faite au dessus, 
+    // mais on peut la laisser ou l'enlever, ça ne gêne pas).
 
     const hasNoExtension = !file.name.includes('.');
     const riskyExtensions = ['.py', '.md', '.js', '.html', '.php', '.sh', '.bat', '.css', '.json', '.ts'];
     let fileExt = file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')).toLowerCase() : "";
     
+    // Si fichier sensible ou sans extension -> ZIP individuel
     if (hasNoExtension || riskyExtensions.includes(fileExt)) {
         createSingleZipAndUpload(file);
     } else {
+        // Sinon -> Envoi direct
         displayAndUpload(file, file.name, false);
     }
 }
